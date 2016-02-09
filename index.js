@@ -1,5 +1,6 @@
 var fs = require('fs-promise');
 var exec = require('child-process-promise').exec;
+require('colors');
 
 var names;
 
@@ -17,19 +18,17 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var results = {};
 
 var IGNORE_REGEX = /db\/migration|generated/;
 
 fs.readdir('./repos')
 .then(folders => {
-	console.log('FOLDERS');
-	console.log(folders);
+	console.log('reading from ' + folders.join(', '));
 
 	return Promise.all(folders.map(folder => {
 		return exec('git pull', {cwd: './repos/'+folder})
 		.then(() => {
-			return exec('git log --simplify-merges --merges --since=2016-01-29 --format="%H"', {cwd: './repos/'+folder});
+			return exec('git log --simplify-merges --merges --since=2016-02-03 --format="%H"', {cwd: './repos/'+folder, maxBuffer:10240*1024});
 		});
 	}))
 	.then(getStds)
@@ -42,13 +41,15 @@ fs.readdir('./repos')
 	})
 	.then(commits => {
 		return Promise.all(commits.map((commit, i) => {
-			return exec('git log --format="-----break----- %H %ae" --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i]});
+			return exec('git log --format="-brk- %H %ae" --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024});
 		}));
 	})
 	.then(getStds)
 	.then(repos => {
+		var results = {};
+
 		repos.forEach(repo => {
-			var commits = repo.trim().split('-----break-----').filter(a => a.trim());
+			var commits = repo.trim().split('-brk-').filter(a => a.trim());
 			commits.forEach(commit => {
 				var files = commit.trim().split('\n').filter(a => a.trim());
 				var human = files.shift().trim().replace(/[a-f0-9]+\s/g, '');
@@ -62,24 +63,41 @@ fs.readdir('./repos')
 				var start = results[human] || 0;
 				results[human] = files.reduce((acc, file) => {
 					var stats = file.split('\t');
+					// if it's a binary file we get '-'.
+					// this is a fast and harmless way to check both of them.
+					if (stats[0] === stats[1]) {
+						return acc;
+					}
 					return acc + (+stats[0]) - (+stats[1]);
 				}, start);
 			});
 		});
-		//repoCommits.forEach()
-	})
-	.catch(err => {
-		console.log('ERROR!!');
-		console.error(err);
+		return results;
 	});
 })
-.then(() => {
+.then((results) => {
 	var sortedHumans = Object.keys(results);
 	sortedHumans.sort((humanA, humanB) => {
 		return results[humanA] - results[humanB];
 	});
 	console.log('AND THE STANDINGS ARE:');
 	sortedHumans.forEach((human, i) => {
-		console.log( (i+1) + ' ' + human + ' with ' + results[human] + ' lines added');
+		var count = results[human];
+		if (count < 0) {
+			var str = (i+1) + ' ' + human + ' removed ' + (-count) + ' lines';
+			if (i === 0) {
+				console.log(str.rainbow);
+			} else {
+				console.log(str);
+			}
+		} else if (count === 0) {
+			console.log(((i+1) + ' ' + human + ' broke even'));
+		} else {
+			console.log(((i+1) + ' ' + human + ' added ' + count + ' lines').gray);
+		}
 	});
+})
+.catch(err => {
+	console.log('ERROR!!');
+	console.error(err);
 });

@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "child-process-promise": "^1.1.0",
+    "colors": "^1.1.2",
     "fs-promise": "^0.4.1"
   }
 }
