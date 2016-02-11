@@ -19,16 +19,17 @@ function getStds (results) {
 }
 
 
-var IGNORE_REGEX = /db\/migration|generated/;
+var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\//i;
 
 fs.readdir('./repos')
 .then(folders => {
+	folders = folders.filter(folder => folder.charAt(0) !== '.');
 	console.log('reading from ' + folders.join(', '));
 
 	return Promise.all(folders.map(folder => {
 		return exec('git pull', {cwd: './repos/'+folder})
 		.then(() => {
-			return exec('git log --simplify-merges --merges --since=2016-02-03 --format="%H"', {cwd: './repos/'+folder, maxBuffer:10240*1024});
+			return exec('git log --simplify-merges --merges --since=2016-01-28T00:00:00Z-04:00 --format="%H"', {cwd: './repos/'+folder, maxBuffer:10240*1024});
 		});
 	}))
 	.then(getStds)
