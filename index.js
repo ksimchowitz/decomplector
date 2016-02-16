@@ -18,30 +18,43 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
+var startingDate = '2016-02-11T00:00:00Z-04:00';
 
 var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|\/spec\/|\/tests?\//i;
 
 fs.readdir('./repos')
+// update everything
 .then(folders => {
 	folders = folders.filter(folder => folder.charAt(0) !== '.');
-	console.log('reading from ' + folders.join(', '));
-
+	console.log('Checking ' + folders.join(', '));
 	return Promise.all(folders.map(folder => {
-		return exec('git pull', {cwd: './repos/'+folder})
-		.then(() => {
-			return exec('git log --simplify-merges --merges --since=2016-02-11T00:00:00Z-04:00 --format="%H"', {cwd: './repos/'+folder, maxBuffer:10240*1024});
-		});
+		return exec('git pull', {cwd: './repos/'+folder});
+	})).then(() => folders);
+})
+// find the repos with changes since the starting date and filter out the ones with none
+.then(folders => {
+	return Promise.all(folders.map(folder => {
+		// this gets any one merge commit since the starting date
+		return exec('git log --simplify-merges --merges --max-count=1 --after=' + startingDate + ' --grep="Merge pull request" --format="%H"', {cwd: './repos/'+folder});
 	}))
 	.then(getStds)
-	.then(commitLists => {
-		var commits = commitLists.map(list => {
-			list = list.trim().split('\n');
-			return list[list.length-1];
-		});
-		return commits;
-	})
+	.then((stds) => {
+		return folders.filter((folder, i) => stds[i].trim());
+	});
+})
+// get all the changes merged into master since the starting date and tally up the results
+.then(folders => {
+	console.log('Found changes to ' + folders.join(', '));
+
+	return Promise.all(folders.map(folder => {
+		// this gets the last merge commit before the starting date
+		return exec('git log --simplify-merges --merges --max-count=1 --before=' + startingDate + ' --grep="Merge pull request" --format="%H"', {cwd: './repos/'+folder});
+	}))
+	.then(getStds)
+	.then(commits => commits.map(commit => commit.trim()))
 	.then(commits => {
 		return Promise.all(commits.map((commit, i) => {
+			// this gets the commits on master that are not on the last merge commit before the starting date
 			return exec('git log --format="-brk- %H %ae" --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024});
 		}));
 	})
@@ -83,6 +96,7 @@ fs.readdir('./repos')
 		return results;
 	});
 })
+// print the results
 .then((results) => {
 	var sortedHumans = Object.keys(results);
 	sortedHumans.sort((humanA, humanB) => {
