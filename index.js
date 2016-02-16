@@ -35,7 +35,7 @@ fs.readdir('./repos')
 .then(folders => {
 	return Promise.all(folders.map(folder => {
 		// this gets any one merge commit since the starting date
-		return exec('git log --simplify-merges --merges --max-count=1 --after=' + startingDate + ' --grep="Merge pull request" --format="%H"', {cwd: './repos/'+folder});
+		return exec('git log --simplify-merges --merges --max-count=1 --after=' + startingDate + ' --format="%H"', {cwd: './repos/'+folder});
 	}))
 	.then(getStds)
 	.then((stds) => {
@@ -48,7 +48,7 @@ fs.readdir('./repos')
 
 	return Promise.all(folders.map(folder => {
 		// this gets the last merge commit before the starting date
-		return exec('git log --simplify-merges --merges --max-count=1 --before=' + startingDate + ' --grep="Merge pull request" --format="%H"', {cwd: './repos/'+folder});
+		return exec('git log --simplify-merges --merges --max-count=1 --before=' + startingDate + ' --format="%H"', {cwd: './repos/'+folder});
 	}))
 	.then(getStds)
 	.then(commits => commits.map(commit => commit.trim()))
