@@ -18,9 +18,10 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDate = '2016-02-11T00:00:00Z-04:00';
+var startingDate = '2016-02-25T00:00:00Z-04:00';
 
-var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|\/spec\/|\/tests?\//i;
+var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\//ig;
+var TESTS_REGEX = /spec\/|tests?\//ig;
 
 fs.readdir('./repos')
 // update everything
@@ -68,9 +69,8 @@ fs.readdir('./repos')
 				var files = commit.trim().split('\n').filter(a => a.trim());
 				var human = files.shift().trim().replace(/[a-f0-9]+\s/g, '');
 
-				files = files.filter(file => {
-					return !IGNORE_REGEX.test(file);
-				});
+				var regularFiles = files.filter(file => file.match(IGNORE_REGEX) === null && file.match(TESTS_REGEX) === null);
+				var testFiles = files.filter(file => file.match(TESTS_REGEX) !== null);
 
 				human = names[human] || human;
 
@@ -78,7 +78,7 @@ fs.readdir('./repos')
 					lines: 0,
 					repos: []
 				};
-				results[human].lines = files.reduce((acc, file) => {
+				results[human].lines = regularFiles.reduce((acc, file) => {
 					var stats = file.split('\t');
 					// if it's a binary file we get '-'.
 					// this is a fast and harmless way to check both of them.
@@ -87,6 +87,18 @@ fs.readdir('./repos')
 					}
 					return acc + (+stats[0]) - (+stats[1]);
 				}, results[human].lines);
+
+				if (testFiles.length) {
+					results[human].testLines = testFiles.reduce((acc, file) => {
+						var stats = file.split('\t');
+						// if it's a binary file we get '-'.
+						// this is a fast and harmless way to check both of them.
+						if (stats[0] === stats[1]) {
+							return acc;
+						}
+						return acc + (+stats[0]) - (+stats[1]);
+					}, results[human].testLines || 0);
+				}
 
 				if (results[human].repos.indexOf(folders[i]) === -1) {
 					results[human].repos.push(folders[i]);
@@ -102,7 +114,7 @@ fs.readdir('./repos')
 	sortedHumans.sort((humanA, humanB) => {
 		return results[humanA].lines - results[humanB].lines;
 	});
-	console.log('AND THE STANDINGS ARE:');
+	console.log('THE DECOMPLECTOR STANDINGS ARE:');
 	sortedHumans.forEach((human, i) => {
 		var count = results[human].lines;
 		var repos = results[human].repos.join(', ');
@@ -119,6 +131,31 @@ fs.readdir('./repos')
 			console.log(((i+1) + ' ' + human + ' added ' + count + ' lines (' + repos + ')').gray);
 		}
 	});
+
+	console.log('\nTHE TESTING STANDINGS ARE:');
+	var testSortedHumans = Object.keys(results);
+	testSortedHumans = testSortedHumans.filter(human => results[human].testLines !== undefined);
+	testSortedHumans.sort((humanA, humanB) => {
+		return results[humanB].testLines - results[humanA].testLines;
+	});
+
+	testSortedHumans.forEach((human, i) => {
+		var count = results[human].testLines;
+		var repos = results[human].repos.join(', ');
+		if (count > 0) {
+			var str = (i+1) + ' ' + human + ' added ' + (count) + ' lines (' + repos + ')';
+			if (i === 0) {
+				console.log(str.rainbow);
+			} else {
+				console.log(str);
+			}
+		} else if (count === 0) {
+			console.log(((i+1) + ' ' + human + ' broke even (' + repos + ')'));
+		} else {
+			console.log(((i+1) + ' ' + human + ' removed ' + count + ' lines (' + repos + ')').gray);
+		}
+	});
+
 })
 .catch(err => {
 	console.log('ERROR!!');
