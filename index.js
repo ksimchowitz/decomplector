@@ -18,7 +18,7 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDate = '2016-02-25T00:00:00Z-04:00';
+var startingDate = '2016-03-03T00:00:00Z-04:00';
 
 var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\//ig;
 var TESTS_REGEX = /spec\/|tests?\//ig;
@@ -29,8 +29,12 @@ fs.readdir('./repos')
 	folders = folders.filter(folder => folder.charAt(0) !== '.');
 	console.log('Checking ' + folders.join(', '));
 	return Promise.all(folders.map(folder => {
-		return exec('git pull', {cwd: './repos/'+folder});
-	})).then(() => folders);
+		return exec('git fetch', {cwd: './repos/'+folder})
+		.then(() => {
+			return exec('git reset --hard origin/HEAD', {cwd: './repos/'+folder});
+		});
+	}))
+	.then(() => folders);
 })
 // find the repos with changes since the starting date and filter out the ones with none
 .then(folders => {
@@ -152,7 +156,7 @@ fs.readdir('./repos')
 		} else if (count === 0) {
 			console.log(((i+1) + ' ' + human + ' broke even (' + repos + ')'));
 		} else {
-			console.log(((i+1) + ' ' + human + ' removed ' + count + ' lines (' + repos + ')').gray);
+			console.log(((i+1) + ' ' + human + ' removed ' + (-count) + ' lines (' + repos + ')').gray);
 		}
 	});
 
