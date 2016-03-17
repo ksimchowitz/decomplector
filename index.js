@@ -18,7 +18,8 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDate = '2016-03-03T00:00:00Z-04:00';
+var startingDate = '2016-03-10T00:00:00Z-04:00';
+var endingDate = '2016-03-17T00:00:00Z-04:00';
 
 var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\//ig;
 var TESTS_REGEX = /spec\/|tests?\//ig;
@@ -40,7 +41,7 @@ fs.readdir('./repos')
 .then(folders => {
 	return Promise.all(folders.map(folder => {
 		// this gets any one merge commit since the starting date
-		return exec('git log --simplify-merges --merges --max-count=1 --after=' + startingDate + ' --format="%H"', {cwd: './repos/'+folder});
+		return exec('git log --simplify-merges --merges --max-count=1 --after=' + startingDate + ' --before=' + endingDate + ' --format="%H"', {cwd: './repos/'+folder});
 	}))
 	.then(getStds)
 	.then((stds) => {
@@ -60,7 +61,7 @@ fs.readdir('./repos')
 	.then(commits => {
 		return Promise.all(commits.map((commit, i) => {
 			// this gets the commits on master that are not on the last merge commit before the starting date
-			return exec('git log --format="-brk- %H %ae" --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024});
+			return exec('git log --format="-brk- %H %ae" --before=' + endingDate + ' --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024});
 		}));
 	})
 	.then(getStds)
