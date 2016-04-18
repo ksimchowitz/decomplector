@@ -11,6 +11,7 @@
   "dependencies": {
     "child-process-promise": "^1.1.0",
     "colors": "^1.1.2",
-    "fs-promise": "^0.4.1"
+    "fs-promise": "^0.4.1",
+    "github": "^0.2.4"
   }
 }
