@@ -22,7 +22,7 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDateStr = '2016-04-14T00:00:00Z';
+var startingDateStr = '2016-04-28T00:00:00Z';
 var endingDateStr = '2017-03-17T00:00:00Z';
 
 var startingDate = new Date(startingDateStr);
@@ -56,15 +56,21 @@ fs.readdir('./repos')
 })
 // get all the changes merged into master since the starting date and tally up the results
 .then(folders => {
-	console.log('Found changes to ' + folders.join(', '));
+	//console.log('Found changes to ' + folders.join(', '));
 
 	return Promise.all(folders.map(folder => {
 		return github.getPRs('compstak', folder)
 		.then((prs) => {
-			prs.sort((a, b) => a.closed_at > b.closed_at ? -1 : 1);
+			// console.log(prs);
+			prs.sort((a, b) => a.closed_at < b.closed_at ? -1 : 1);
 			prs = prs.filter(pr => pr.base.ref === 'master');
-			prs = prs.filter(pr => new Date(pr.closed_at) < startingDate);
-			return prs[0].merge_commit_sha;
+			prs = prs.filter(pr => pr.merged_at !== null);
+			prs = prs.filter(pr => new Date(pr.closed_at) > startingDate);
+			if (folder === 'marionette-apps') {
+				//console.log(prs);
+			}
+			console.log(folder, prs.map((pr) => pr.number));
+			return prs[0].base.sha;
 		});
 		// this gets the last merge commit before the starting date
 		//return exec('git log --simplify-merges --merges --max-count=1 --before=' + startingDate + ' --format="%H"', {cwd: './repos/'+folder});
