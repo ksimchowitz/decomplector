@@ -1,5 +1,6 @@
 var fs = require('fs-promise');
 var exec = require('child-process-promise').exec;
+var moment = require('moment');
 
 var github = require('./github');
 github.authenticate();
@@ -22,12 +23,13 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDateStr = '2016-04-28T00:00:00Z';
+var startingDateStr = moment().add(-6, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
+console.log(startingDateStr);
 var endingDateStr = '2017-03-17T00:00:00Z';
 
 var startingDate = new Date(startingDateStr);
 
-var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\//ig;
+var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\/|\.csv$/ig;
 var TESTS_REGEX = /spec\/|tests?\/|sandbox/ig;
 
 fs.readdir('./repos')
@@ -61,7 +63,7 @@ fs.readdir('./repos')
 	return Promise.all(folders.map(folder => {
 		return github.getPRs('compstak', folder)
 		.then((prs) => {
-			// console.log(prs);
+			//console.log(prs);
 			prs.sort((a, b) => a.closed_at < b.closed_at ? -1 : 1);
 			prs = prs.filter(pr => pr.base.ref === 'master');
 			prs = prs.filter(pr => pr.merged_at !== null);

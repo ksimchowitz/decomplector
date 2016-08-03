@@ -12,6 +12,7 @@
     "child-process-promise": "^1.1.0",
     "colors": "^1.1.2",
     "fs-promise": "^0.4.1",
-    "github": "^0.2.4"
+    "github": "^0.2.4",
+    "moment": "^2.14.1"
   }
 }
