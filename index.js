@@ -29,7 +29,7 @@ var endingDateStr = '2017-03-17T00:00:00Z';
 
 var startingDate = new Date(startingDateStr);
 
-var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\/|\.csv$/ig;
+var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\/|\.csv$|\.json$/ig;
 var TESTS_REGEX = /spec\/|tests?\/|sandbox/ig;
 
 fs.readdir('./repos')
