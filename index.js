@@ -25,7 +25,7 @@ function getStds (results) {
 
 var startingDateStr = moment().add(-6, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
 console.log(startingDateStr);
-var endingDateStr = '2017-03-17T00:00:00Z';
+var endingDateStr = '2099-03-17T00:00:00Z';
 
 var startingDate = new Date(startingDateStr);
 
@@ -58,7 +58,7 @@ fs.readdir('./repos')
 })
 // get all the changes merged into master since the starting date and tally up the results
 .then(folders => {
-	//console.log('Found changes to ' + folders.join(', '));
+	console.log('Found changes to ' + folders.join(', '));
 
 	return Promise.all(folders.map(folder => {
 		return github.getPRs('compstak', folder)
