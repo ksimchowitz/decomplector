@@ -16,20 +16,20 @@ try {
 }
 
 function getStd (result) {
-	return result.stdout;
+	return result ? result.stdout : null;
 }
 
 function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDateStr = moment().add(-6, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
+var startingDateStr = moment().add(-7, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
 console.log(startingDateStr);
 var endingDateStr = '2099-03-17T00:00:00Z';
 
 var startingDate = new Date(startingDateStr);
 
-var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\/|\.csv$|\.json$/ig;
+var IGNORE_REGEX = /db\/migration|resources\/seo\/assets\/|build\/|dist\/|\.csv$|\.json$|\.lock$|\.md$/ig;
 var TESTS_REGEX = /spec\/|tests?\/|sandbox/ig;
 
 fs.readdir('./repos')
@@ -72,7 +72,7 @@ fs.readdir('./repos')
 				//console.log(prs);
 			}
 			console.log(folder, prs.map((pr) => pr.number));
-			return prs[0].base.sha;
+			return prs[0] ? prs[0].base.sha : null;
 		});
 		// this gets the last merge commit before the starting date
 		//return exec('git log --simplify-merges --merges --max-count=1 --before=' + startingDate + ' --format="%H"', {cwd: './repos/'+folder});
@@ -81,6 +81,9 @@ fs.readdir('./repos')
 	// .then(commits => commits.map(commit => commit.trim()))
 	.then(commits => {
 		return Promise.all(commits.map((commit, i) => {
+			if (!commit) {
+				return null;
+			}
 			// this gets the commits on master that are not on the last merge commit before the starting date
 			return exec('git log --format="-brk- %H %ae" --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024});
 		}));
@@ -90,6 +93,9 @@ fs.readdir('./repos')
 		var results = {};
 
 		repos.forEach((repo, i) => {
+			if (repo === null) {
+				return;
+			}
 			var commits = repo.trim().split('-brk-').filter(a => a.trim());
 			commits.forEach(commit => {
 				var files = commit.trim().split('\n').filter(a => a.trim());
