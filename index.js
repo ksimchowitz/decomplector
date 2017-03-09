@@ -25,7 +25,7 @@ function getStds (results) {
 
 var startingDateStr = moment().add(-7, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
 console.log(startingDateStr);
-var endingDateStr = '2099-03-17T00:00:00Z';
+var endingDateStr = moment().add(1, 'days').startOf('day').toISOString(); //'2099-03-17T00:00:00Z';
 
 var startingDate = new Date(startingDateStr);
 
