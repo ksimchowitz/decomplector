@@ -23,7 +23,7 @@ function getStds (results) {
 	return results.map(getStd);
 }
 
-var startingDateStr = moment().add(-7, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
+var startingDateStr = moment().add(-6, 'days').startOf('day').toISOString(); //'2016-07-20T00:00:00Z';
 console.log(startingDateStr);
 var endingDateStr = moment().add(1, 'days').startOf('day').toISOString(); //'2099-03-17T00:00:00Z';
 
@@ -49,11 +49,23 @@ fs.readdir('./repos')
 .then(folders => {
 	return Promise.all(folders.map(folder => {
 		// this gets any one merge commit since the starting date
-		return exec('git log --simplify-merges --merges --max-count=1 --after=' + startingDateStr + ' --before=' + endingDateStr + ' --format="%H"', {cwd: './repos/'+folder});
+		return exec('git log --max-count=1 --after=' + startingDateStr + ' --before=' + endingDateStr + ' --format="%H"', {cwd: './repos/'+folder});
 	}))
 	.then(getStds)
 	.then((stds) => {
-		return folders.filter((folder, i) => stds[i].trim());
+		console.log(stds);
+		return Promise.all(folders.map((folder, i) => {
+			if (stds[i].trim()) {
+				return stds[i];
+			} else {
+				return exec('git log --max-count=1 --after=' + startingDateStr + ' --before=' + endingDateStr + ' --format="%H"', {cwd: './repos/'+folder})
+				.then(getStd);
+			}
+		}))
+		.then(next => {
+			return folders.filter((folder, i) => next[i].trim());
+		});
+
 	});
 })
 // get all the changes merged into master since the starting date and tally up the results
