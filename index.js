@@ -53,7 +53,6 @@ fs.readdir('./repos')
 	}))
 	.then(getStds)
 	.then((stds) => {
-		console.log(stds);
 		return Promise.all(folders.map((folder, i) => {
 			if (stds[i].trim()) {
 				return stds[i];
@@ -80,11 +79,10 @@ fs.readdir('./repos')
 			prs = prs.filter(pr => pr.base.ref === 'master');
 			prs = prs.filter(pr => pr.merged_at !== null);
 			prs = prs.filter(pr => new Date(pr.closed_at) > startingDate);
-			if (folder === 'marionette-apps') {
-				//console.log(prs);
-			}
-			console.log(folder, prs.map((pr) => pr.number));
-			return prs[0] ? prs[0].base.sha : null;
+			return {
+				folder,
+				commit: prs[0] ? prs[0].base.sha : null
+			};
 		});
 		// this gets the last merge commit before the starting date
 		//return exec('git log --simplify-merges --merges --max-count=1 --before=' + startingDate + ' --format="%H"', {cwd: './repos/'+folder});
@@ -93,22 +91,27 @@ fs.readdir('./repos')
 	// .then(commits => commits.map(commit => commit.trim()))
 	.then(commits => {
 		return Promise.all(commits.map((commit, i) => {
-			if (!commit) {
+			if (!commit.commit) {
 				return null;
 			}
 			// this gets the commits on master that are not on the last merge commit before the starting date
-			return exec('git log --format="-brk- %H %ae" --numstat '+commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024});
+			return exec('git log --format="-brk- %H %ae" --numstat '+commit.commit+'..HEAD', {cwd: './repos/'+folders[i], maxBuffer:10240*1024})
+			.then(getStd)
+			.then(commits => {
+				return {
+					folder: commit.folder,
+					commits
+				};
+			});
 		}));
 	})
-	.then(getStds)
 	.then(repos => {
 		var results = {};
-
 		repos.forEach((repo, i) => {
 			if (repo === null) {
 				return;
 			}
-			var commits = repo.trim().split('-brk-').filter(a => a.trim());
+			var commits = repo.commits.trim().split('-brk-').filter(a => a.trim());
 			commits.forEach(commit => {
 				var files = commit.trim().split('\n').filter(a => a.trim());
 				var human = files.shift().trim().replace(/[a-f0-9]+\s/g, '');
@@ -118,9 +121,10 @@ fs.readdir('./repos')
 
 				human = names[human] || human;
 
+				human = human.padEnd(12) + repo.folder.padEnd(17);
+
 				results[human] = results[human] || {
 					lines: 0,
-					repos: []
 				};
 				results[human].lines = regularFiles.reduce((acc, file) => {
 					var stats = file.split('\t');
@@ -143,10 +147,6 @@ fs.readdir('./repos')
 						return acc + (+stats[0]) - (+stats[1]);
 					}, results[human].testLines || 0);
 				}
-
-				if (results[human].repos.indexOf(folders[i]) === -1) {
-					results[human].repos.push(folders[i]);
-				}
 			});
 		});
 		return results;
@@ -161,18 +161,18 @@ fs.readdir('./repos')
 	console.log('THE DECOMPLECTOR STANDINGS ARE:');
 	sortedHumans.forEach((human, i) => {
 		var count = results[human].lines;
-		var repos = results[human].repos.join(', ');
+		var number = i.toString().padStart(2);
 		if (count < 0) {
-			var str = (i+1) + ' ' + human + ' removed ' + (-count) + ' lines (' + repos + ')';
+			var str = number + ' ' + human + ' removed ' + (-count) + ' lines';
 			if (i === 0) {
 				console.log(str.rainbow);
 			} else {
 				console.log(str);
 			}
 		} else if (count === 0) {
-			console.log(((i+1) + ' ' + human + ' broke even (' + repos + ')'));
+			console.log((number + ' ' + human + ' broke even'));
 		} else {
-			console.log(((i+1) + ' ' + human + ' added ' + count + ' lines (' + repos + ')').gray);
+			console.log((number + ' ' + human + ' added ' + count + ' lines').gray);
 		}
 	});
 
@@ -186,17 +186,18 @@ fs.readdir('./repos')
 	testSortedHumans.forEach((human, i) => {
 		var count = results[human].testLines;
 		var repos = results[human].repos.join(', ');
+		var number = i.toString().padStart(2);
 		if (count > 0) {
-			var str = (i+1) + ' ' + human + ' added ' + (count) + ' lines (' + repos + ')';
+			var str = number + ' ' + human + ' added ' + (count) + ' lines';
 			if (i === 0) {
 				console.log(str.rainbow);
 			} else {
 				console.log(str);
 			}
 		} else if (count === 0) {
-			console.log(((i+1) + ' ' + human + ' broke even (' + repos + ')'));
+			console.log((number + ' ' + human + ' broke even'));
 		} else {
-			console.log(((i+1) + ' ' + human + ' removed ' + (-count) + ' lines (' + repos + ')').gray);
+			console.log((number + ' ' + human + ' removed ' + (-count) + ' lines').gray);
 		}
 	});
 
