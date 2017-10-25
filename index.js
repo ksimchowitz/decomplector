@@ -185,7 +185,6 @@ fs.readdir('./repos')
 
 	testSortedHumans.forEach((human, i) => {
 		var count = results[human].testLines;
-		var repos = results[human].repos.join(', ');
 		var number = i.toString().padStart(2);
 		if (count > 0) {
 			var str = number + ' ' + human + ' added ' + (count) + ' lines';
