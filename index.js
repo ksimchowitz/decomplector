@@ -79,6 +79,7 @@ fs.readdir('./repos')
 			prs = prs.filter(pr => pr.base.ref === 'master');
 			prs = prs.filter(pr => pr.merged_at !== null);
 			prs = prs.filter(pr => new Date(pr.closed_at) > startingDate);
+			console.log(folder, prs.map(pr => pr.number));
 			return {
 				folder,
 				commit: prs[0] ? prs[0].base.sha : null
